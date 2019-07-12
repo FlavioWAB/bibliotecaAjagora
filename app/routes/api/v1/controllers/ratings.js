@@ -3,16 +3,18 @@ var router = express.Router();
 var model = require('../../../../models/index');
 
 router.get('/', function (req, res, next) {
-	model.rating.findAll({})
+	model.ratings.findAll({})
 		.then(ratings => res.json({
 			error: false,
 			data: ratings
 		}))
-		.catch(error => res.json({
-			error: true,
-			data: [],
-			error: error
-		}))
+		.catch(error => {
+			res.status(400);
+			res.json({
+				error: error,
+				data: []
+			})
+		})
 });
 
 module.exports = router;
