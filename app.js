@@ -53,8 +53,8 @@ app.use(function (req, res, next) {
 	next();
 })
 
-app.listen(3300, () => {
-	console.info('Running on 3300');
+app.listen(process.env.PORT || 5000, () => {
+	console.info('Running');
 })
 
 module.exports = app;
