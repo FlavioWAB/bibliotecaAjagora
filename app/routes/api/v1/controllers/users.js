@@ -2,6 +2,9 @@ var express = require('express');
 var router = express.Router();
 var model = require('../../../../models/index');
 var formidable = require('formidable');
+var bcrypt = require('bcrypt');
+var isAuthenticated = require("../../../../middleware/isAuthenticated");
+
 
 router.get('/', function (req, res, next) {
 	model.users.findAll({
@@ -73,30 +76,32 @@ router.post('/', (req, res, next) => {
 				admin
 			} = fields;
 
-			model.users.create({
+			bcrypt.hash(password, 10, function (err, hash) {
+				model.users.create({
 
-				firstName: firstName,
-				lastName: lastName,
-				username: username,
-				password: password,
-				admin: admin
+					firstName: firstName,
+					lastName: lastName,
+					username: username,
+					password: hash,
+					admin: admin
 
-			}).then(user => res.status(201).json({
-				error: false,
-				data: user
-			})).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
-					})
-				}
-			})
+				}).then(user => res.status(201).json({
+					error: false,
+					data: user
+				})).catch(error => {
+					if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+						res.status(422).json({
+							error: error.errors,
+							data: []
+						})
+					} else {
+						res.status(500).json({
+							error: error,
+							data: []
+						})
+					}
+				})
+			});
 
 		} else {
 			res.status(422).json({
@@ -107,46 +112,85 @@ router.post('/', (req, res, next) => {
 	});
 });
 
-router.put('/:id', (req, res, next) => {
+router.put('/:id', isAuthenticated, (req, res, next) => {
 
 	const id = req.params.id;
 	var form = new formidable.IncomingForm();
 
-	form.uploadDir = "./files";
-	form.keepExtensions = true;
+	if(req.user.id != req.params.id){
+		res.status(400).json({
+			error: true,
+			data: []
+		});
+	}
 
 	form.parse(req, function (err, fields, files) {
 		if (!err) {
-
-			model.users.update(fields, {
-				where: {
-					id: id
-				}
-			}).then(affectedRows => {
-				if (affectedRows == 0) {
-					res.status(404).json({
-						error: true,
-						data: []
-					})
-				} else {
-					res.status(200).json({
-						error: false,
-						data: [id]
-					})
-				}
-			}).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
+			if (fields.password != undefined) {
+				bcrypt.hash(fields.password, 10, function (err, hash) {
+					fields.password = hash;
+					model.users.update(fields, {
+						where: {
+							id: id
+						}
+					}).then(affectedRows => {
+						if (affectedRows == 0) {
+							res.status(404).json({
+								error: true,
+								data: []
+							})
+						} else {
+							res.status(200).json({
+								error: false,
+								data: [id]
+							})
+						}
+					}).catch(error => {
+						if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+							res.status(422).json({
+								error: error.errors,
+								data: []
+							})
+						} else {
+							res.status(500).json({
+								error: error,
+								data: []
+							});
+						}
 					});
-				}
-			});
+				});
+			} else {
+				model.users.update(fields, {
+					where: {
+						id: id
+					}
+				}).then(affectedRows => {
+					if (affectedRows == 0) {
+						res.status(404).json({
+							error: true,
+							data: []
+						})
+					} else {
+						res.status(200).json({
+							error: false,
+							data: [id]
+						})
+					}
+				}).catch(error => {
+					if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+						res.status(422).json({
+							error: error.errors,
+							data: []
+						})
+					} else {
+						res.status(500).json({
+							error: error,
+							data: []
+						});
+					}
+				});
+			}
+
 		} else {
 			res.status(422).json({
 				error: error,
@@ -156,9 +200,16 @@ router.put('/:id', (req, res, next) => {
 	});
 });
 
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', isAuthenticated, (req, res, next) => {
 
 	const id = req.params.id;
+
+	if(req.user.id != req.params.id){
+		res.status(400).json({
+			error: true,
+			data: []
+		});
+	}
 
 	model.users.update({
 		deleted: true

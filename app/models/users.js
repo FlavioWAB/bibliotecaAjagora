@@ -1,5 +1,6 @@
+
 module.exports = function (sequelize, DataTypes) {
-    return sequelize.define('users', {
+    var Users = sequelize.define('users', {
         id: {
             type: DataTypes.BIGINT,
             allowNull: false,
@@ -8,11 +9,11 @@ module.exports = function (sequelize, DataTypes) {
         },
         firstName: {
             type: DataTypes.STRING(50),
-            allowNull: true
+            allowNull: false
         },
         lastName: {
             type: DataTypes.STRING(50),
-            allowNull: true
+            allowNull: false
         },
         username: {
             type: DataTypes.STRING(50),
@@ -41,6 +42,12 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false
         }
     }, {
-            tableName: 'users'
+            tableName: 'users',
         });
+
+    Users.prototype.validPassword = function (password) {
+        return bcrypt.compareSync(password, this.password);
+    };
+
+    return Users;
 };

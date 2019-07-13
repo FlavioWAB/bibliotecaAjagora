@@ -3,8 +3,10 @@ var router = express.Router();
 var model = require('../../../../models/index');
 var formidable = require('formidable');
 var fs = require('fs');
+var isAuthenticated = require("../../../../middleware/isAuthenticated");
+var isAdmin = require("../../../../middleware/isAdmin");
 
-router.get('/', (req, res, next) => {
+router.get('/', isAuthenticated, (req, res, next) => {
 	model.books.findAll({
 		where: {
 			deleted: 0
@@ -29,7 +31,7 @@ router.get('/', (req, res, next) => {
 	})
 });
 
-router.get('/:id', (req, res, next) => {
+router.get('/:id', isAuthenticated, (req, res, next) => {
 	var id = req.params.id;
 	model.sequelize.query('SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.id = :id AND books.deleted = \'0\'',
 		{ replacements: { id: id }, type: model.sequelize.QueryTypes.SELECT }
@@ -54,7 +56,7 @@ router.get('/:id', (req, res, next) => {
 	})
 });
 
-router.post('/', (req, res, next) => {
+router.post('/', isAdmin, (req, res, next) => {
 	var form = new formidable.IncomingForm();
 
 	form.uploadDir = "./files";
@@ -107,14 +109,14 @@ router.post('/', (req, res, next) => {
 
 		} else {
 			res.status(422).json({
-				error: error,
+				error: err,
 				data: []
 			})
 		}
 	});
 });
 
-router.put('/:id', (req, res, next) => {
+router.put('/:id', isAdmin, (req, res, next) => {
 
 	const id = req.params.id;
 	var form = new formidable.IncomingForm();
@@ -241,7 +243,7 @@ router.put('/:id', (req, res, next) => {
 	});
 });
 
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', isAdmin, (req, res, next) => {
 
 	const id = req.params.id;
 
