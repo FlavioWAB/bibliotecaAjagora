@@ -33,9 +33,6 @@ app.use(session({ secret: "keyboard cat", resave: true, saveUninitialized: true 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use('/', indexRouter);
-app.use('/api', apiRouter);
-
 app.use(cors());
 
 app.use(function (req, res, next) {
@@ -58,7 +55,10 @@ app.use(function (req, res, next) {
 	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');
 	next();
-})
+});
+
+app.use('/', indexRouter);
+app.use('/api', apiRouter);
 
 app.listen(port, () => {
 	console.info('Running on '+port);
