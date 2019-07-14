@@ -35,6 +35,10 @@ app.use(passport.session());
 
 app.use(cors());
 
+app.use('/', indexRouter);
+app.use('/api', apiRouter);
+
+
 app.use(function (req, res, next) {
 	next(createError(404));
 });
@@ -48,17 +52,6 @@ app.use(function (err, req, res, next) {
 	res.json({error: err.message});
 
 });
-
-app.use(function (req, res, next) {
-	res.header('Access-Control-Allow-Origin', '*');
-	res.header('Access-Control-Allow-Credentials', true);
-	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
-	res.header('Access-Control-Allow-Headers', 'Content-Type');
-	next();
-});
-
-app.use('/', indexRouter);
-app.use('/api', apiRouter);
 
 app.listen(port, () => {
 	console.info('Running on '+port);
