@@ -33,7 +33,7 @@ router.get('/', isAuthenticated, (req, res, next) => {
 
 router.get('/:id', isAuthenticated, (req, res, next) => {
 	var id = req.params.id;
-	model.sequelize.query('SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.id = :id AND books.deleted = \'0\'',
+	model.sequelize.query('SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.id = :id AND books.deleted = \'0\'',
 		{ replacements: { id: id }, type: model.sequelize.QueryTypes.SELECT }
 	).then(books => {
 		if (books.length == 0 || books[0].id == null) {
@@ -278,6 +278,30 @@ router.delete('/:id', isAdmin, (req, res, next) => {
 				});
 			}
 		});
+});
+
+router.get('/title/:title', isAuthenticated, (req, res, next) => {
+	var title = req.params.title;
+	model.sequelize.query(`SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\'`,
+		{ replacements: { title: '%'+title+'%' }, type: model.sequelize.QueryTypes.SELECT }
+	).then(books => {
+		if (books.length == 0 || books[0].id == null) {
+			res.status(404).send({
+				error: true,
+				data: []
+			});
+		} else {
+			res.json({
+				error: false,
+				data: books
+			})
+		}
+	}).catch(error => {
+		res.status(500).send({
+			error: error,
+			data: []
+		});
+	})
 });
 
 module.exports = router;

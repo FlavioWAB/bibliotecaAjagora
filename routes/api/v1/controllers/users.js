@@ -11,26 +11,24 @@ router.get('/', function (req, res, next) {
 		where: {
 			deleted: false
 		}
-	})
-		.then(users => {
-			if (users.length == 0 || users[0].id == null) {
-				res.status(404).send({
-					error: true,
-					data: []
-				});
-			} else {
-				res.json({
-					error: false,
-					data: users
-				})
-			}
-		})
-		.catch(error => {
-			res.status(500).send({
-				error: error,
+	}).then(users => {
+		if (users.length == 0 || users[0].id == null) {
+			res.status(404).send({
+				error: true,
 				data: []
 			});
-		})
+		} else {
+			res.json({
+				error: false,
+				data: users
+			})
+		}
+	}).catch(error => {
+		res.status(500).send({
+			error: error,
+			data: []
+		});
+	})
 });
 
 router.get('/:id', function (req, res, next) {
@@ -40,26 +38,24 @@ router.get('/:id', function (req, res, next) {
 			id: id,
 			deleted: false
 		}
-	})
-		.then(users => {
-			if (users.length == 0 || users[0].id == null) {
-				res.status(404).send({
-					error: true,
-					data: []
-				});
-			} else {
-				res.json({
-					error: false,
-					data: users
-				})
-			}
-		})
-		.catch(error => {
-			res.status(500).send({
-				error: error,
+	}).then(users => {
+		if (users.length == 0 || users[0].id == null) {
+			res.status(404).send({
+				error: true,
 				data: []
 			});
-		})
+		} else {
+			res.json({
+				error: false,
+				data: users
+			})
+		}
+	}).catch(error => {
+		res.status(500).send({
+			error: error,
+			data: []
+		});
+	})
 });
 
 router.post('/', (req, res, next) => {
@@ -117,7 +113,7 @@ router.put('/:id', isAuthenticated, (req, res, next) => {
 	const id = req.params.id;
 	var form = new formidable.IncomingForm();
 
-	if(req.user.id != req.params.id){
+	if (req.user.id != req.params.id) {
 		res.status(400).json({
 			error: true,
 			data: []
@@ -204,7 +200,7 @@ router.delete('/:id', isAuthenticated, (req, res, next) => {
 
 	const id = req.params.id;
 
-	if(req.user.id != req.params.id){
+	if (req.user.id != req.params.id) {
 		res.status(400).json({
 			error: true,
 			data: []

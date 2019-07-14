@@ -11,7 +11,7 @@ var indexRouter = require('./routes/index');
 var apiRouter = require('./routes/api/api');
 
 var app = express();
-
+var port = process.env.PORT || 5000;
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
@@ -34,7 +34,6 @@ app.use(function (req, res, next) {
 	next(createError(404));
 });
 
-
 app.use(function (err, req, res, next) {
 
 	res.locals.message = err.message;
@@ -53,8 +52,8 @@ app.use(function (req, res, next) {
 	next();
 })
 
-app.listen(process.env.PORT || 5000, () => {
-	console.info('Running');
+app.listen(port, () => {
+	console.info('Running on '+port);
 })
 
 module.exports = app;
