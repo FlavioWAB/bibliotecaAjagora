@@ -4,18 +4,20 @@ var model = require('../../../../models/index');
 var formidable = require('formidable');
 
 router.get('/', function (req, res, next) {
-	model.ratings.findAll({})
-		.then(ratings => res.json({
-			error: false,
-			data: ratings
-		}))
-		.catch(error => {
-			res.status(400);
-			res.json({
-				error: error,
-				data: []
-			})
+	model.ratings.findAll({
+		order: [['updatedAt', 'DESC']],
+		limit: 3,
+		attributes: ['bookId', 'rating']
+	}).then(ratings => res.json({
+		error: false,
+		data: ratings
+	})).catch(error => {
+		res.status(400);
+		res.json({
+			error: error,
+			data: []
 		})
+	})
 });
 
 router.get('/book/:id', function (req, res, next) {
@@ -26,18 +28,16 @@ router.get('/book/:id', function (req, res, next) {
 			bookId: id
 		},
 		attributes: ['userId', 'rating']
-	})
-		.then(ratings => res.json({
-			error: false,
-			data: ratings
-		}))
-		.catch(error => {
-			res.status(400);
-			res.json({
-				error: error,
-				data: []
-			})
+	}).then(ratings => res.json({
+		error: false,
+		data: ratings
+	})).catch(error => {
+		res.status(400);
+		res.json({
+			error: error,
+			data: []
 		})
+	})
 });
 
 router.get('/user/:id', function (req, res, next) {
@@ -47,19 +47,19 @@ router.get('/user/:id', function (req, res, next) {
 		where: {
 			userId: id
 		},
+		order: [['updatedAt', 'DESC']],
+		limit: 3,
 		attributes: ['bookId', 'rating']
-	})
-		.then(ratings => res.json({
-			error: false,
-			data: ratings
-		}))
-		.catch(error => {
-			res.status(400);
-			res.json({
-				error: error,
-				data: []
-			})
+	}).then(ratings => res.json({
+		error: false,
+		data: ratings
+	})).catch(error => {
+		res.status(400);
+		res.json({
+			error: error,
+			data: []
 		})
+	})
 });
 
 router.post('/', (req, res, next) => {

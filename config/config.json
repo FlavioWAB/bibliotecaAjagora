@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "b5e7bf3fcfad33",
-    "password": "32aabfa6",
-    "database": "heroku_314639a74747c83",
-    "host": "us-cdbr-iron-east-02.cleardb.net",
+    "username": "root",
+    "password": null,
+    "database": "ajagora",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "test": {
