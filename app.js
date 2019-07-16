@@ -4,7 +4,6 @@ var path = require('path');
 var session = require("express-session");
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var passport = require('./middleware/passport');
 var bodyParser = require("body-parser");
 var cors = require('cors')
 
@@ -27,10 +26,6 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use(session({ secret: "keyboard cat", resave: true, saveUninitialized: true }));
-app.use(passport.initialize());
-app.use(passport.session());
 
 
 app.use(cors({

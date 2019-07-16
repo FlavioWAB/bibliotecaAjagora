@@ -2,17 +2,22 @@ var express = require('express');
 var router = express.Router();
 var model = require('../../../../models/index');
 var isAuthenticated = require("../../../../middleware/isAuthenticated");
-var isAdmin = require("../../../../middleware/isAdmin");
+var methodNotAllowed = (req, res, next) => res.sendStatus(405);
 
-router.get('/', isAdmin, (req, res, next) => {
+router.route('/').get(isAuthenticated, (req, res, next) => {
+	if (!req.isAdmin) {
+		res.sendStatus(403);
+		return;
+	}
+
 	model.ratings.findAll({
 		order: [['updatedAt', 'DESC']],
 		limit: 3,
 		attributes: ['rating'],
 		include: [{
-            model: model.books,
-            attributes: ['author','description','publisher','thumbnail','title']
-        }]
+			model: model.books,
+			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title']
+		}]
 	}).then(ratings => {
 		res.json(ratings);
 	}).catch(error => {
@@ -20,47 +25,7 @@ router.get('/', isAdmin, (req, res, next) => {
 			error: error
 		});
 	});
-});
-
-router.get('/book/:id', isAdmin, (req, res, next) => {
-	var id = req.params.id;
-
-	model.ratings.findAll({
-		where: {
-			bookId: id
-		},
-		attributes: ['userId', 'rating']
-	}).then(ratings => {
-		res.json(ratings);
-	}).catch(error => {
-		res.status(400).json({
-			error: error
-		});
-	});
-});
-
-router.get('/user/', isAuthenticated, (req, res, next) => {
-	var id = req.user.id;
-
-	model.ratings.findAll({
-		where: {
-			userId: id
-		},
-		order: [['updatedAt', 'DESC']] 	,
-		limit: 3,
-		attributes: ['rating'],
-		include: [{
-            model: model.books,
-            attributes: ['author','description','publisher','thumbnail','title']
-        }]
-	}).then(ratings => res.json(ratings)).catch(error => {
-		res.status(400).json({
-			error: error
-		});
-	});
-});
-
-router.post('/', (req, res, next) => {
+}).post((req, res, next) => {
 	const {
 		bookId,
 		userId,
@@ -86,9 +51,52 @@ router.post('/', (req, res, next) => {
 			});
 		}
 	});
-});
+}).all(methodNotAllowed);
 
-router.put('/user/:userId/book/:bookId', (req, res, next) => {
+router.route('/book/:id').get(isAuthenticated, (req, res, next) => {
+	if (!req.isAdmin) {
+		res.sendStatus(403);
+		return;
+	}
+
+	var id = req.params.id;
+
+	model.ratings.findAll({
+		where: {
+			bookId: id
+		},
+		attributes: ['userId', 'rating']
+	}).then(ratings => {
+		res.json(ratings);
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
+}).all(methodNotAllowed);
+
+router.route('/user/').get(isAuthenticated, (req, res, next) => {
+	var id = req.userId;
+
+	model.ratings.findAll({
+		where: {
+			userId: id
+		},
+		order: [['updatedAt', 'DESC']],
+		limit: 3,
+		attributes: ['rating'],
+		include: [{
+			model: model.books,
+			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title']
+		}]
+	}).then(ratings => res.json(ratings)).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
+}).all(methodNotAllowed);
+
+router.route('/user/:userId/book/:bookId').put((req, res, next) => {
 
 	const userId = req.params.userId;
 	const bookId = req.params.bookId;
@@ -115,6 +123,6 @@ router.put('/user/:userId/book/:bookId', (req, res, next) => {
 			});
 		}
 	});
-});
+}).all(methodNotAllowed);
 
 module.exports = router;

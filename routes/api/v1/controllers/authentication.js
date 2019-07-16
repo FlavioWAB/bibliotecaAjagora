@@ -1,31 +1,49 @@
-var passport = require('../../../../middleware/passport');
 var express = require('express');
 var router = express.Router();
+var model = require('../../../../models/index');
+var jwt = require('jsonwebtoken');
+var bcrypt = require('bcrypt');
+var methodNotAllowed = (req, res, next) => res.sendStatus(405);
 
-router.post("/login", passport.authenticate('local'), (req, res) => {
-    res.status(200).json({
-        userId: req.user.id
-    });
-});
+const secretKey = 'gedtP64CSuTYdnfg';
 
-router.get("/logout", (req, res) => {
-    req.logout();
-    res.status(200).json({});
-});
+router.route("/login").post((req, res) => {
+    const {
+        username,
+        password
+    } = req.body;
 
-router.get("/logged", (req, res) => {
-    if (req.user) {
-        if(req.user.admin){
-            // Admin
-            res.status(200).json(1);
-        } else {
-            // Usuário
-            res.status(200).json(2);
+    model.users.findOne({
+        where: {
+            username: username
         }
-    } else {
-        // Não logado
-        res.status(200).json(0);
-    }
-});
+    }).then(user => {
+        if (!user || !bcrypt.compareSync(password, user.password)) {
+            res.sendStatus(401);
+        } else {
+            jwt.sign({
+                user:{
+                    id: user.id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    username: user.username,
+                    admin: user.admin
+                }
+            }, secretKey, (error, token) => {
+                if (!error) {
+                    res.json({
+                        token
+                    });
+                } else {
+                    res.send(500).json({
+                        error
+                    });
+                }
+            });
+        }
+    }).catch(err => {
+        res.status(500).json(err);
+    });
+}).all(methodNotAllowed);
 
 module.exports = router;

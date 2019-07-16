@@ -4,9 +4,9 @@ var model = require('../../../../models/index');
 var formidable = require('formidable');
 var fs = require('fs');
 var isAuthenticated = require("../../../../middleware/isAuthenticated");
-var isAdmin = require("../../../../middleware/isAdmin");
+var methodNotAllowed = (req, res, next) => res.sendStatus(405);
 
-router.get('/', isAuthenticated, (req, res, next) => {
+router.route('/').get((req, res, next) => {
 	model.books.findAll({
 		where: {
 			deleted: 0
@@ -21,42 +21,20 @@ router.get('/', isAuthenticated, (req, res, next) => {
 		res.status(500).json({
 			error: error
 		});
-	})
-});
+	});
+}).post(isAuthenticated, (req, res, next) => {
 
-router.get('/:id', isAuthenticated, (req, res, next) => {
-	var id = req.params.id;
-	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.id = :id AND books.deleted = \'0\'';
-
-	if (req.user.admin) {
-		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+	if(!req.isAdmin){
+		res.sendStatus(403);
+		return;
 	}
 
-	model.sequelize.query(query, {
-		replacements: {
-			id: id
-		},
-		type: model.sequelize.QueryTypes.SELECT
-	}).then(books => {
-		if (books.length == 0 || books[0].id == null) {
-			res.sendStatus(404);
-		} else {
-			res.json(books);
-		}
-	}).catch(error => {
-		res.status(500).json({
-			error: error
-		});
-	})
-});
-
-router.post('/', isAdmin, (req, res, next) => {
 	var form = new formidable.IncomingForm();
 
 	form.uploadDir = "./files";
 	form.keepExtensions = true;
 
-	form.parse(req, function (err, fields, files) {
+	form.parse(req, (err, fields, files) => {
 		if (!err) {
 
 			const {
@@ -101,17 +79,46 @@ router.post('/', isAdmin, (req, res, next) => {
 			})
 		}
 	});
-});
+}).all(methodNotAllowed);
 
-router.put('/:id', isAdmin, (req, res, next) => {
+router.route('/:id').get(isAuthenticated, (req, res, next) => {
+	var id = req.params.id;
+	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.id = :id AND books.deleted = \'0\'';
 
+	if (req.isAdmin) {
+		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+	}
+
+	model.sequelize.query(query, {
+		replacements: {
+			id: id
+		},
+		type: model.sequelize.QueryTypes.SELECT
+	}).then(books => {
+		if (books.length == 0 || books[0].id == null) {
+			res.sendStatus(404);
+		} else {
+			res.json(books);
+		}
+	}).catch(error => {
+		res.status(500).json({
+			error: error
+		});
+	})
+}).put(isAuthenticated, (req, res, next) => {
+	
+	if(!req.isAdmin){
+		res.sendStatus(403);
+		return;
+	}
+	
 	const id = req.params.id;
 	var form = new formidable.IncomingForm();
 	var oldFile = '';
 	form.uploadDir = "./files";
 	form.keepExtensions = true;
 
-	form.parse(req, function (err, fields, files) {
+	form.parse(req, (err, fields, files) => {
 		if (!err) {
 
 			if (typeof files.thumbnail == 'undefined') {
@@ -203,9 +210,12 @@ router.put('/:id', isAdmin, (req, res, next) => {
 			});
 		}
 	});
-});
-
-router.delete('/:id', isAdmin, (req, res, next) => {
+}).delete(isAuthenticated, (req, res, next) => {
+	
+	if(!req.isAdmin){
+		res.sendStatus(403);
+		return;
+	}
 
 	const id = req.params.id;
 
@@ -232,12 +242,12 @@ router.delete('/:id', isAdmin, (req, res, next) => {
 				});
 			}
 		});
-});
+}).all(methodNotAllowed);
 
-router.get('/title/:title', isAuthenticated, (req, res, next) => {
+router.route('/title/:title').get(isAuthenticated, (req, res, next) => {
 	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.title LIKE :title AND books.deleted = \'0\'';
 
-	if (req.user.admin) {
+	if (req.isAdmin) {
 		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
 	}
 
@@ -258,6 +268,6 @@ router.get('/title/:title', isAuthenticated, (req, res, next) => {
 			error: error
 		});
 	})
-});
+}).all(methodNotAllowed);
 
 module.exports = router;

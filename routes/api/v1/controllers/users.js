@@ -3,9 +3,9 @@ var router = express.Router();
 var model = require('../../../../models/index');
 var bcrypt = require('bcrypt');
 var isAuthenticated = require("../../../../middleware/isAuthenticated");
+var methodNotAllowed = (req, res, next) => res.sendStatus(405);
 
-
-router.get('/', function (req, res, next) {
+router.route('/').get((req, res, next) => {
 	model.users.findAll({
 		where: {
 			deleted: false
@@ -21,29 +21,7 @@ router.get('/', function (req, res, next) {
 			error: error
 		});
 	});
-});
-
-router.get('/:id', function (req, res, next) {
-	var id = req.params.id;
-	model.users.findAll({
-		where: {
-			id: id,
-			deleted: false
-		}
-	}).then(users => {
-		if (users.length == 0 || users[0].id == null) {
-			res.sendStatus(404);
-		} else {
-			res.json(users);
-		}
-	}).catch(error => {
-		res.status(500).send({
-			error: error
-		});
-	});
-});
-
-router.post('/', (req, res, next) => {
+}).post((req, res, next) => {
 	const {
 		firstName,
 		lastName,
@@ -52,7 +30,7 @@ router.post('/', (req, res, next) => {
 		admin
 	} = req.body;
 
-	bcrypt.hash(password, 10, function (err, hash) {
+	bcrypt.hash(password, 10, (err, hash) => {
 		model.users.create({
 
 			firstName: firstName,
@@ -76,19 +54,37 @@ router.post('/', (req, res, next) => {
 			}
 		});
 	});
-});
+}).all(methodNotAllowed);
 
-router.put('/:id', isAuthenticated, (req, res, next) => {
+router.route('/:id').get((req, res, next) => {
+	var id = req.params.id;
+	model.users.findAll({
+		where: {
+			id: id,
+			deleted: false
+		}
+	}).then(users => {
+		if (users.length == 0 || users[0].id == null) {
+			res.sendStatus(404);
+		} else {
+			res.json(users);
+		}
+	}).catch(error => {
+		res.status(500).send({
+			error: error
+		});
+	});
+}).put(isAuthenticated, (req, res, next) => {
 
 	const id = req.params.id;
 	const fields = req.body;
 
-	if (req.user.id != req.params.id) {
+	if (req.userId != req.params.id) {
 		res.sendStatus(400);
 	}
 
 	if (typeof fields.password != 'undefined') {
-		bcrypt.hash(fields.password, 10, function (err, hash) {
+		bcrypt.hash(fields.password, 10, (err, hash) => {
 			fields.password = hash;
 			model.users.update(fields, {
 				where: {
@@ -135,13 +131,11 @@ router.put('/:id', isAuthenticated, (req, res, next) => {
 			}
 		});
 	}
-});
-
-router.delete('/:id', isAuthenticated, (req, res, next) => {
+}).delete(isAuthenticated, (req, res, next) => {
 
 	const id = req.params.id;
 
-	if (req.user.id != req.params.id) {
+	if (req.userId != req.params.id) {
 		res.sendStatus(400);
 	}
 
@@ -168,6 +162,6 @@ router.delete('/:id', isAuthenticated, (req, res, next) => {
 				});
 			}
 		});
-});
+}).all(methodNotAllowed);
 
 module.exports = router;
