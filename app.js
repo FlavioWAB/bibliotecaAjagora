@@ -8,7 +8,6 @@ var passport = require('./middleware/passport');
 var bodyParser = require("body-parser");
 var cors = require('cors')
 
-var indexRouter = require('./routes/index');
 var apiRouter = require('./routes/api/api');
 
 var port = process.env.PORT || 5000;
@@ -33,11 +32,13 @@ app.use(session({ secret: "keyboard cat", resave: true, saveUninitialized: true 
 app.use(passport.initialize());
 app.use(passport.session());
 
-app.use(cors());
 
-app.use('/', indexRouter);
+app.use(cors({
+	origin: 'http://localhost:3000',
+	credentials: true
+}));
+
 app.use('/api', apiRouter);
-
 
 app.use(function (req, res, next) {
 	next(createError(404));
@@ -49,12 +50,12 @@ app.use(function (err, req, res, next) {
 	res.locals.error = req.app.get('env') === 'development' ? err : {};
 	console.log(err);
 	res.status(err.status || 500);
-	res.json({error: err.message});
+	res.json({ error: err.message });
 
 });
 
 app.listen(port, () => {
-	console.info('Running on '+port);
+	console.info('Running on ' + port);
 })
 
 module.exports = app;

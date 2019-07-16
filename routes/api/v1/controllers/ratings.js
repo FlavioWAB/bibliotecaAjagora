@@ -1,26 +1,28 @@
 var express = require('express');
 var router = express.Router();
 var model = require('../../../../models/index');
-var formidable = require('formidable');
+var isAuthenticated = require("../../../../middleware/isAuthenticated");
+var isAdmin = require("../../../../middleware/isAdmin");
 
-router.get('/', function (req, res, next) {
+router.get('/', isAdmin, (req, res, next) => {
 	model.ratings.findAll({
 		order: [['updatedAt', 'DESC']],
 		limit: 3,
-		attributes: ['bookId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
+		attributes: ['rating'],
+		include: [{
+            model: model.books,
+            attributes: ['author','description','publisher','thumbnail','title']
+        }]
+	}).then(ratings => {
+		res.json(ratings);
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
 });
 
-router.get('/book/:id', function (req, res, next) {
+router.get('/book/:id', isAdmin, (req, res, next) => {
 	var id = req.params.id;
 
 	model.ratings.findAll({
@@ -28,80 +30,60 @@ router.get('/book/:id', function (req, res, next) {
 			bookId: id
 		},
 		attributes: ['userId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
+	}).then(ratings => {
+		res.json(ratings);
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
 });
 
-router.get('/user/:id', function (req, res, next) {
-	var id = req.params.id;
+router.get('/user/', isAuthenticated, (req, res, next) => {
+	var id = req.user.id;
 
 	model.ratings.findAll({
 		where: {
 			userId: id
 		},
-		order: [['updatedAt', 'DESC']],
+		order: [['updatedAt', 'DESC']] 	,
 		limit: 3,
-		attributes: ['bookId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
+		attributes: ['rating'],
+		include: [{
+            model: model.books,
+            attributes: ['author','description','publisher','thumbnail','title']
+        }]
+	}).then(ratings => res.json(ratings)).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
 });
 
 router.post('/', (req, res, next) => {
-	var form = new formidable.IncomingForm();
+	const {
+		bookId,
+		userId,
+		rating
+	} = req.body;
 
-	form.parse(req, function (err, fields, files) {
-		if (!err) {
+	model.ratings.create({
 
-			const {
-				bookId,
-				userId,
-				rating
-			} = fields;
+		bookId: bookId,
+		userId: userId,
+		rating: rating
 
-			model.ratings.create({
-
-				bookId: bookId,
-				userId: userId,
-				rating: rating
-
-			}).then(rating => res.status(201).json({
-				error: false,
-				data: rating
-			})).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
-					})
-				}
-			})
-
-		} else {
+	}).then(rating => {
+		res.status(201).json(rating);
+	}).catch(error => {
+		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 			res.status(422).json({
-				error: error,
-				data: []
-			})
+				error: error.errors
+			});
+		} else {
+			res.status(500).json({
+				error: error
+			});
 		}
 	});
 });
@@ -111,47 +93,26 @@ router.put('/user/:userId/book/:bookId', (req, res, next) => {
 	const userId = req.params.userId;
 	const bookId = req.params.bookId;
 
-	var form = new formidable.IncomingForm();
-
-	form.parse(req, function (err, fields, files) {
-		if (!err) {
-
-			model.ratings.update(fields, {
-				where: {
-					userId: userId,
-					bookId: bookId
-				}
-			}).then(affectedRows => {
-				if (affectedRows == 0) {
-					res.status(404).json({
-						error: true,
-						data: []
-					})
-				} else {
-					res.status(200).json({
-						error: false,
-						data: [id]
-					})
-				}
-			}).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
-					});
-				}
-			});
-
+	model.ratings.update(req.body, {
+		where: {
+			userId: userId,
+			bookId: bookId
+		}
+	}).then(affectedRows => {
+		if (affectedRows == 0) {
+			res.sendStatus(404);
 		} else {
+			res.status(200).json('');
+		}
+	}).catch(error => {
+		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 			res.status(422).json({
-				error: error,
-				data: []
+				error: error.errors
 			})
+		} else {
+			res.status(500).json({
+				error: error
+			});
 		}
 	});
 });

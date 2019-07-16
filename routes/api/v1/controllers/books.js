@@ -13,45 +13,39 @@ router.get('/', isAuthenticated, (req, res, next) => {
 		}
 	}).then(books => {
 		if (books.length == 0 || books[0].id == null) {
-			res.status(404).send({
-				error: true,
-				data: []
-			});
+			res.sendStatus(404);
 		} else {
-			res.json({
-				error: false,
-				data: books
-			})
+			res.json(books);
 		}
 	}).catch(error => {
-		res.status(500).send({
-			error: error,
-			data: []
+		res.status(500).json({
+			error: error
 		});
 	})
 });
 
 router.get('/:id', isAuthenticated, (req, res, next) => {
 	var id = req.params.id;
-	model.sequelize.query('SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.id = :id AND books.deleted = \'0\'',
-		{ replacements: { id: id }, type: model.sequelize.QueryTypes.SELECT }
-	).then(books => {
-		if (books.length == 0 || books[0].id == null) {
-			res.status(404).send({
-				error: true,
-				data: []
-			});
-		} else {
+	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.id = :id AND books.deleted = \'0\'';
 
-			res.json({
-				error: false,
-				data: books
-			})
+	if (req.user.admin) {
+		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+	}
+
+	model.sequelize.query(query, {
+		replacements: {
+			id: id
+		},
+		type: model.sequelize.QueryTypes.SELECT
+	}).then(books => {
+		if (books.length == 0 || books[0].id == null) {
+			res.sendStatus(404);
+		} else {
+			res.json(books);
 		}
 	}).catch(error => {
-		res.status(500).send({
-			error: error,
-			data: []
+		res.status(500).json({
+			error: error
 		});
 	})
 });
@@ -72,12 +66,9 @@ router.post('/', isAdmin, (req, res, next) => {
 				description
 			} = fields;
 
-			if (files.thumbnail == undefined) {
+			if (typeof files.thumbnail == 'undefined') {
 
-				res.status(422).json({
-					error: true,
-					data: []
-				});
+				res.sendStatus(422);
 
 			} else {
 
@@ -89,19 +80,16 @@ router.post('/', isAdmin, (req, res, next) => {
 					description: description,
 					thumbnail: files.thumbnail.path.substring(6)
 
-				}).then(book => res.status(201).json({
-					error: false,
-					data: book
-				})).catch(error => {
-					if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+				}).then(book => res.status(201).json(
+					book
+				)).catch(error => {
+					if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 						res.status(422).json({
-							error: error.errors,
-							data: []
+							error: error.errors
 						})
 					} else {
 						res.status(500).json({
-							error: error,
-							data: []
+							error: error
 						})
 					}
 				});
@@ -109,8 +97,7 @@ router.post('/', isAdmin, (req, res, next) => {
 
 		} else {
 			res.status(422).json({
-				error: err,
-				data: []
+				error: err
 			})
 		}
 	});
@@ -127,33 +114,25 @@ router.put('/:id', isAdmin, (req, res, next) => {
 	form.parse(req, function (err, fields, files) {
 		if (!err) {
 
-			if (files.thumbnail == undefined) {
+			if (typeof files.thumbnail == 'undefined') {
 				model.books.update(fields, {
 					where: {
 						id: id
 					}
 				}).then(affectedRows => {
 					if (affectedRows == 0) {
-						res.status(404).json({
-							error: true,
-							data: []
-						})
+						res.sendStatus(404);
 					} else {
-						res.status(200).json({
-							error: false,
-							data: [id]
-						})
+						res.status(200).json(id)
 					}
 				}).catch(error => {
-					if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+					if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 						res.status(422).json({
-							error: error.errors,
-							data: []
+							error: error.errors
 						});
 					} else {
 						res.status(500).json({
-							error: error,
-							data: []
+							error: error
 						});
 					}
 				});
@@ -165,10 +144,7 @@ router.put('/:id', isAdmin, (req, res, next) => {
 					attributes: ['thumbnail']
 				}).then(books => {
 					if (books.length == 0) {
-						res.status(422).send({
-							error: true,
-							data: []
-						});
+						res.sendStatus(422);
 					} else {
 
 						oldFile = './files/' + books[0].thumbnail;
@@ -176,9 +152,8 @@ router.put('/:id', isAdmin, (req, res, next) => {
 						try {
 							fs.unlinkSync(oldFile);
 						} catch (error) {
-							res.status(500).send({
-								error: error,
-								data: []
+							res.status(500).json({
+								error: error
 							});
 							return;
 						}
@@ -186,12 +161,9 @@ router.put('/:id', isAdmin, (req, res, next) => {
 						const updatedFields = fields;
 						Object.assign(updatedFields, { thumbnail: files.thumbnail.path.substring(6) });
 
-						if (files.thumbnail == undefined) {
+						if (typeof files.thumbnail == 'undefined') {
 
-							res.status(422).json({
-								error: true,
-								data: []
-							});
+							res.sendStatus(422);
 
 						} else {
 
@@ -201,43 +173,33 @@ router.put('/:id', isAdmin, (req, res, next) => {
 								}
 							}).then(affectedRows => {
 								if (affectedRows == 0) {
-									res.status(404).json({
-										error: true,
-										data: []
-									})
+									res.sendStatus(404);
 								} else {
-									res.status(200).json({
-										error: false,
-										data: [id]
-									})
+									res.status(200).json(id)
 								}
 							}).catch(error => {
-								if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+								if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 									res.status(422).json({
-										error: error.errors,
-										data: []
+										error: error.errors
 									});
 								} else {
 									res.status(500).json({
-										error: error,
-										data: []
+										error: error
 									});
 								}
 							});
 						}
 					}
 				}).catch(error => {
-					res.status(500).send({
-						error: error,
-						data: []
+					res.status(500).json({
+						error: error
 					});
 				})
 			}
 
 		} else {
 			res.status(422).json({
-				error: error,
-				data: []
+				error: error
 			});
 		}
 	});
@@ -255,51 +217,45 @@ router.delete('/:id', isAdmin, (req, res, next) => {
 			}
 		}).then(affectedRows => {
 			if (affectedRows == 0) {
-				res.status(404).json({
-					error: true,
-					data: []
-				})
+				res.sendStatus(404);
 			} else {
-				res.status(200).json({
-					error: false,
-					data: [id]
-				})
+				res.status(200).json(id);
 			}
 		}).catch(error => {
-			if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+			if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
 				res.status(422).json({
-					error: error.errors,
-					data: []
+					error: error.errors
 				});
 			} else {
 				res.status(500).json({
-					error: error,
-					data: []
+					error: error
 				});
 			}
 		});
 });
 
 router.get('/title/:title', isAuthenticated, (req, res, next) => {
+	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.title LIKE :title AND books.deleted = \'0\'';
+
+	if (req.user.admin) {
+		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+	}
+
 	var title = req.params.title;
-	model.sequelize.query(`SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\'`,
-		{ replacements: { title: '%'+title+'%' }, type: model.sequelize.QueryTypes.SELECT }
-	).then(books => {
+	model.sequelize.query(query, {
+		replacements: {
+			title: '%' + title + '%'
+		},
+		type: model.sequelize.QueryTypes.SELECT
+	}).then(books => {
 		if (books.length == 0 || books[0].id == null) {
-			res.status(404).send({
-				error: true,
-				data: []
-			});
+			res.sendStatus(404);
 		} else {
-			res.json({
-				error: false,
-				data: books
-			})
+			res.json(books)
 		}
 	}).catch(error => {
-		res.status(500).send({
-			error: error,
-			data: []
+		res.status(500).json({
+			error: error
 		});
 	})
 });
