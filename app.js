@@ -28,10 +28,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-app.use(cors({
-	origin: 'https://nameless-falls-72613.herokuapp.com/',
-	credentials: true
-}));
+app.use(cors());
 
 app.use('/api', apiRouter);
 
