@@ -4,7 +4,7 @@ const secretKey = 'gedtP64CSuTYdnfg';
 module.exports = function (req, res, next) {
 
     const bearerHeader = req.headers['authorization'];
-    console.log(req.headers);
+
     if (typeof bearerHeader !== 'undefined') {
         const bearer = bearerHeader.split(' ');
         const bearerToken = bearer[1];

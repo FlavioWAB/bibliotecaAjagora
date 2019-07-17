@@ -86,7 +86,7 @@ router.route('/:id').get(isAuthenticated, (req, res, next) => {
 	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.id = :id AND books.deleted = \'0\'';
 
 	if (req.isAdmin) {
-		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.id = :id AND books.deleted = \'0\''
 	}
 
 	model.sequelize.query(query, {
@@ -106,7 +106,6 @@ router.route('/:id').get(isAuthenticated, (req, res, next) => {
 		});
 	})
 }).put(isAuthenticated, (req, res, next) => {
-	
 	if(!req.isAdmin){
 		res.sendStatus(403);
 		return;
@@ -120,6 +119,8 @@ router.route('/:id').get(isAuthenticated, (req, res, next) => {
 
 	form.parse(req, (err, fields, files) => {
 		if (!err) {
+
+			console.log(fields);
 
 			if (typeof files.thumbnail == 'undefined') {
 				model.books.update(fields, {
@@ -182,7 +183,7 @@ router.route('/:id').get(isAuthenticated, (req, res, next) => {
 								if (affectedRows == 0) {
 									res.sendStatus(404);
 								} else {
-									res.status(200).json(id)
+									res.status(200).json(files.thumbnail.path.substring(6))
 								}
 							}).catch(error => {
 								if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
@@ -248,7 +249,7 @@ router.route('/title/:title').get(isAuthenticated, (req, res, next) => {
 	var query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.title LIKE :title AND books.deleted = \'0\'';
 
 	if (req.isAdmin) {
-		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail, AVG(ratings.rating) as rating , COUNT(ratings.rating) as ratingCount FROM books AS books LEFT JOIN ratings AS ratings ON books.id = ratings.bookId WHERE books.title LIKE :title AND books.deleted = \'0\''
+		query = 'SELECT books.id, books.title, books.author, books.publisher, books.description, books.thumbnail FROM books AS books WHERE books.title LIKE :title AND books.deleted = \'0\''
 	}
 
 	var title = req.params.title;

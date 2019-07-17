@@ -22,7 +22,7 @@ router.route("/login").post((req, res) => {
             res.sendStatus(401);
         } else {
             jwt.sign({
-                user:{
+                user: {
                     id: user.id,
                     firstName: user.firstName,
                     lastName: user.lastName,
@@ -44,6 +44,30 @@ router.route("/login").post((req, res) => {
     }).catch(err => {
         res.status(500).json(err);
     });
+}).all(methodNotAllowed);
+
+router.route("/isLogged").get((req, res) => {
+
+    const token = req.headers['authorization'];
+
+    if (typeof token !== 'undefined') {
+        const bearer = token.split(' ');
+        const bearerToken = bearer[1];
+
+        jwt.verify(bearerToken, secretKey, (err) => {
+            if (!err) {
+                var decoded = jwt.decode(bearerToken);
+                if(decoded.user.admin == 1){
+                    res.json(1);
+                } else {
+                    res.json(2);
+                }
+                
+            } else {
+                res.json(0);
+            }
+        })
+    }
 }).all(methodNotAllowed);
 
 module.exports = router;

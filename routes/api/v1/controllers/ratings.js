@@ -16,7 +16,10 @@ router.route('/').get(isAuthenticated, (req, res, next) => {
 		attributes: ['rating'],
 		include: [{
 			model: model.books,
-			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title']
+			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title'],
+			where: {
+				deleted: 0
+			}
 		}]
 	}).then(ratings => {
 		res.json(ratings);
@@ -25,12 +28,13 @@ router.route('/').get(isAuthenticated, (req, res, next) => {
 			error: error
 		});
 	});
-}).post((req, res, next) => {
+}).post(isAuthenticated, (req, res, next) => {
 	const {
 		bookId,
-		userId,
 		rating
 	} = req.body;
+
+	const userId = req.userId;
 
 	model.ratings.create({
 
@@ -45,6 +49,34 @@ router.route('/').get(isAuthenticated, (req, res, next) => {
 			res.status(422).json({
 				error: error.errors
 			});
+		} else {
+			res.status(500).json({
+				error: error
+			});
+		}
+	});
+}).put(isAuthenticated, (req, res, next) => {
+
+	const userId = req.userId;
+	const bookId = req.body.bookId;
+	const rating = req.body.rating;
+
+	model.ratings.update({ rating: rating }, {
+		where: {
+			userId: userId,
+			bookId: bookId
+		}
+	}).then(affectedRows => {
+		if (affectedRows == 0) {
+			res.sendStatus(404);
+		} else {
+			res.status(200).json('');
+		}
+	}).catch(error => {
+		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+			res.status(422).json({
+				error: error.errors
+			})
 		} else {
 			res.status(500).json({
 				error: error
@@ -96,33 +128,28 @@ router.route('/user/').get(isAuthenticated, (req, res, next) => {
 	});
 }).all(methodNotAllowed);
 
-router.route('/user/:userId/book/:bookId').put((req, res, next) => {
+router.route('/user/:bookId').get(isAuthenticated, (req, res, next) => {
+	var userId = req.userId;
+	var bookId = req.params.bookId;
 
-	const userId = req.params.userId;
-	const bookId = req.params.bookId;
-
-	model.ratings.update(req.body, {
+	model.ratings.findOne({
 		where: {
 			userId: userId,
 			bookId: bookId
-		}
-	}).then(affectedRows => {
-		if (affectedRows == 0) {
+		},
+		attributes: ['rating']
+	}).then(ratings => {
+		if (ratings == null) {
 			res.sendStatus(404);
 		} else {
-			res.status(200).json('');
+			res.json(ratings)
 		}
 	}).catch(error => {
-		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-			res.status(422).json({
-				error: error.errors
-			})
-		} else {
-			res.status(500).json({
-				error: error
-			});
-		}
+		res.status(400).json({
+			error: error
+		});
 	});
+
 }).all(methodNotAllowed);
 
 module.exports = router;
