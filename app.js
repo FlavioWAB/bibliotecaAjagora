@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 app.use(cors({
-	origin: 'http://localhost:3000',
+	origin: 'https://nameless-falls-72613.herokuapp.com/',
 	credentials: true
 }));
 
