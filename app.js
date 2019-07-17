@@ -5,7 +5,7 @@ var session = require("express-session");
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var bodyParser = require("body-parser");
-var cors = require('cors')
+var cors = require('cors');
 
 var apiRouter = require('./routes/api/api');
 
@@ -25,11 +25,8 @@ app.use(bodyParser.json());
 
 app.use(cookieParser());
 
-app.use(express.static(path.join(__dirname, 'public')));
-
-
 app.use(cors());
-
+app.use('/files', express.static('files'));
 app.use('/api', apiRouter);
 
 app.use(function (req, res, next) {
