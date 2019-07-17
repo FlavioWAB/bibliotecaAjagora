@@ -10,5 +10,6 @@ router.use('/books', booksRouter);
 router.use('/users', usersRouter);
 router.use('/ratings', ratingsRouter);
 router.use('/authentication', authenticationRouter);
+router.use('/files',express.static('./files'));
 
 module.exports = router;

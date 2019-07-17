@@ -1,26 +1,96 @@
 var express = require('express');
 var router = express.Router();
 var model = require('../../../../models/index');
-var formidable = require('formidable');
+var isAuthenticated = require("../../../../middleware/isAuthenticated");
+var methodNotAllowed = (req, res, next) => res.sendStatus(405);
 
-router.get('/', function (req, res, next) {
+router.route('/').get(isAuthenticated, (req, res, next) => {
+	if (!req.isAdmin) {
+		res.sendStatus(403);
+		return;
+	}
+
 	model.ratings.findAll({
 		order: [['updatedAt', 'DESC']],
 		limit: 3,
-		attributes: ['bookId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
-});
+		attributes: ['rating'],
+		include: [{
+			model: model.books,
+			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title'],
+			where: {
+				deleted: 0
+			}
+		}]
+	}).then(ratings => {
+		res.json(ratings);
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
+}).post(isAuthenticated, (req, res, next) => {
+	const {
+		bookId,
+		rating
+	} = req.body;
 
-router.get('/book/:id', function (req, res, next) {
+	const userId = req.userId;
+
+	model.ratings.create({
+
+		bookId: bookId,
+		userId: userId,
+		rating: rating
+
+	}).then(rating => {
+		res.status(201).json(rating);
+	}).catch(error => {
+		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+			res.status(422).json({
+				error: error.errors
+			});
+		} else {
+			res.status(500).json({
+				error: error
+			});
+		}
+	});
+}).put(isAuthenticated, (req, res, next) => {
+
+	const userId = req.userId;
+	const bookId = req.body.bookId;
+	const rating = req.body.rating;
+
+	model.ratings.update({ rating: rating }, {
+		where: {
+			userId: userId,
+			bookId: bookId
+		}
+	}).then(affectedRows => {
+		if (affectedRows == 0) {
+			res.sendStatus(404);
+		} else {
+			res.status(200).json('');
+		}
+	}).catch(error => {
+		if (typeof error.name != 'undefined' && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
+			res.status(422).json({
+				error: error.errors
+			})
+		} else {
+			res.status(500).json({
+				error: error
+			});
+		}
+	});
+}).all(methodNotAllowed);
+
+router.route('/book/:id').get(isAuthenticated, (req, res, next) => {
+	if (!req.isAdmin) {
+		res.sendStatus(403);
+		return;
+	}
+
 	var id = req.params.id;
 
 	model.ratings.findAll({
@@ -28,20 +98,17 @@ router.get('/book/:id', function (req, res, next) {
 			bookId: id
 		},
 		attributes: ['userId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
-});
+	}).then(ratings => {
+		res.json(ratings);
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
+	});
+}).all(methodNotAllowed);
 
-router.get('/user/:id', function (req, res, next) {
-	var id = req.params.id;
+router.route('/user/').get(isAuthenticated, (req, res, next) => {
+	var id = req.userId;
 
 	model.ratings.findAll({
 		where: {
@@ -49,111 +116,40 @@ router.get('/user/:id', function (req, res, next) {
 		},
 		order: [['updatedAt', 'DESC']],
 		limit: 3,
-		attributes: ['bookId', 'rating']
-	}).then(ratings => res.json({
-		error: false,
-		data: ratings
-	})).catch(error => {
-		res.status(400);
-		res.json({
-			error: error,
-			data: []
-		})
-	})
-});
-
-router.post('/', (req, res, next) => {
-	var form = new formidable.IncomingForm();
-
-	form.parse(req, function (err, fields, files) {
-		if (!err) {
-
-			const {
-				bookId,
-				userId,
-				rating
-			} = fields;
-
-			model.ratings.create({
-
-				bookId: bookId,
-				userId: userId,
-				rating: rating
-
-			}).then(rating => res.status(201).json({
-				error: false,
-				data: rating
-			})).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
-					})
-				}
-			})
-
-		} else {
-			res.status(422).json({
-				error: error,
-				data: []
-			})
-		}
+		attributes: ['rating'],
+		include: [{
+			model: model.books,
+			attributes: ['author', 'description', 'publisher', 'thumbnail', 'title']
+		}]
+	}).then(ratings => res.json(ratings)).catch(error => {
+		res.status(400).json({
+			error: error
+		});
 	});
-});
+}).all(methodNotAllowed);
 
-router.put('/user/:userId/book/:bookId', (req, res, next) => {
+router.route('/user/:bookId').get(isAuthenticated, (req, res, next) => {
+	var userId = req.userId;
+	var bookId = req.params.bookId;
 
-	const userId = req.params.userId;
-	const bookId = req.params.bookId;
-
-	var form = new formidable.IncomingForm();
-
-	form.parse(req, function (err, fields, files) {
-		if (!err) {
-
-			model.ratings.update(fields, {
-				where: {
-					userId: userId,
-					bookId: bookId
-				}
-			}).then(affectedRows => {
-				if (affectedRows == 0) {
-					res.status(404).json({
-						error: true,
-						data: []
-					})
-				} else {
-					res.status(200).json({
-						error: false,
-						data: [id]
-					})
-				}
-			}).catch(error => {
-				if (error.name != undefined && (error.name == 'SequelizeValidationError' || error.name == 'SequelizeUniqueConstraintError')) {
-					res.status(422).json({
-						error: error.errors,
-						data: []
-					})
-				} else {
-					res.status(500).json({
-						error: error,
-						data: []
-					});
-				}
-			});
-
+	model.ratings.findOne({
+		where: {
+			userId: userId,
+			bookId: bookId
+		},
+		attributes: ['rating']
+	}).then(ratings => {
+		if (ratings == null) {
+			res.sendStatus(404);
 		} else {
-			res.status(422).json({
-				error: error,
-				data: []
-			})
+			res.json(ratings)
 		}
+	}).catch(error => {
+		res.status(400).json({
+			error: error
+		});
 	});
-});
+
+}).all(methodNotAllowed);
 
 module.exports = router;
